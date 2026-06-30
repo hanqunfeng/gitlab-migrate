@@ -32,6 +32,8 @@ GitLab 迁移工具 — 按步骤执行迁移流程。
   5  并行 push 到新 GitLab
   6  输出迁移结果汇总
 
+辅助工具请使用 ./gitlab-util.sh（删除误创建的 Group/Project 等）
+
 示例:
   $(basename "$0") all       # 执行全部步骤
   $(basename "$0") 1         # 仅执行步骤 1

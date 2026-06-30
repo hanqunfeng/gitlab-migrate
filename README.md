@@ -14,7 +14,7 @@ cp scripts/config.example.sh scripts/config.sh
 # 编辑 scripts/config.sh，填入 OLD_GITLAB / NEW_GITLAB / Token
 
 # 3. 添加执行权限
-chmod +x gitlab-migrate.sh scripts/*.sh
+chmod +x gitlab-migrate.sh gitlab-util.sh scripts/*.sh
 
 # 4. 分步执行（推荐首次使用）
 ./gitlab-migrate.sh 1    # 拉取项目列表
@@ -33,6 +33,7 @@ chmod +x gitlab-migrate.sh scripts/*.sh
 ```
 .
 ├── gitlab-migrate.sh          # 统一入口，按参数调度各步骤
+├── gitlab-util.sh             # 辅助工具入口（删除、清理等）
 ├── LICENSE
 ├── .gitignore
 ├── README.md
@@ -45,7 +46,11 @@ chmod +x gitlab-migrate.sh scripts/*.sh
 │   ├── step-03-create-projects.sh
 │   ├── step-04-mirror-clone.sh
 │   ├── step-05-push.sh
-│   └── step-06-summary.sh
+│   ├── step-06-summary.sh
+│   ├── util-delete-project.sh # 删除误创建的项目
+│   ├── util-delete-group.sh   # 删除误创建的 Group
+│   ├── util-delete-local.sh   # 删除本地 mirror 裸仓库
+│   └── util-list-created.sh   # 查看已创建资源记录
 └── gitlab-migration/          # 运行时工作目录（自动创建，不提交）
     ├── repos.txt              # 项目列表（步骤 1 生成）
     ├── groups_created.txt     # 新创建的 group 记录
@@ -171,6 +176,49 @@ git -c "credential.helper=!f() { echo \"username=oauth2\"; echo \"password=${OLD
 | 5 | 无自动跳过，失败项记录在 `fail.log`，可单独重试 |
 
 步骤 1 每次执行会**清空并重新生成** `repos.txt`。
+
+## 辅助工具
+
+核心迁移流程为步骤 1-6。若 Group 或 Project 创建错误，可使用 `gitlab-util.sh` 进行删除或清理，**不影响核心步骤编号**。
+
+```bash
+# 查看本次迁移新创建的资源
+./gitlab-util.sh list-created
+
+# 删除单个误创建的项目（会提示确认）
+./gitlab-util.sh delete-project android/nqms
+
+# 删除项目，并同时清理本地 mirror 裸仓库
+./gitlab-util.sh delete-project android/nqms --local
+
+# 按 projects_created.txt 批量删除（步骤 3 记录的文件）
+./gitlab-util.sh delete-project --from-created --force
+
+# 删除误创建的 Group（会级联删除其下所有项目，请谨慎）
+./gitlab-util.sh delete-group wrong-group
+
+# 按 groups_created.txt 批量删除
+./gitlab-util.sh delete-group --from-created --force
+
+# 仅删除本地 mirror，不影响远程 GitLab
+./gitlab-util.sh delete-local android/nqms
+./gitlab-util.sh delete-local --all --force
+
+# 立即永久删除（不走延迟删除/回收站，需 GitLab 支持且通常需管理员权限）
+./gitlab-util.sh delete-group wrong-group --permanent
+./gitlab-util.sh delete-project android/nqms --permanent
+```
+
+| 命令 | 作用 | 影响范围 |
+|------|------|----------|
+| `delete-project` | 删除新 GitLab 上的项目 | 远程仓库 |
+| `delete-group` | 删除新 GitLab 上的 Group | 远程 Group 及其下所有项目 |
+| `delete-local` | 删除本地 `{group}/{project}.git/` | 仅本地 WORKDIR |
+| `list-created` | 查看 `groups_created.txt` / `projects_created.txt` | 只读 |
+
+> 删除操作默认需要输入 `y` 确认；加 `--force` 可跳过确认（适合脚本化）。`NEW_TOKEN` 需具备删除权限（`api` 且为 Group/Project 的 Owner）。
+>
+> 若 GitLab 启用了“延迟删除（delayed deletion）”，默认删除会进入计划删除状态，UI 会提示类似 “will be permanently deleted on YYYY-MM-DD”。此时资源尚未物理删除。可用 `--permanent` 尝试立即永久删除（具体是否生效取决于 GitLab 版本与实例配置）。
 
 ## 日志说明
 

@@ -43,3 +43,61 @@ fix_repos_txt() {
 urlencode() {
   jq -nr --arg v "$1" '$v|@uri'
 }
+
+# 交互确认；传入 --force 时跳过（便于脚本化调用）
+require_force_or_confirm() {
+  local message=$1
+  local force=${2:-false}
+
+  if [[ "$force" == "true" ]]; then
+    return 0
+  fi
+
+  echo "$message"
+  read -r -p "确认继续? [y/N] " answer
+  case "${answer,,}" in
+    y|yes) return 0 ;;
+    *) echo "[ABORT] 已取消"; return 1 ;;
+  esac
+}
+
+# 删除新 GitLab 上的项目，返回 HTTP 状态码
+gitlab_delete_project() {
+  local project_path=$1
+  local permanent=${2:-false}
+
+  local url="$NEW_GITLAB/api/v4/projects/$(urlencode "$project_path")"
+  if [[ "$permanent" == "true" ]]; then
+    url="${url}?permanently_remove=true"
+  fi
+
+  curl -s -o /dev/null -w "%{http_code}" \
+    --request DELETE \
+    --header "PRIVATE-TOKEN: $NEW_TOKEN" \
+    "$url"
+}
+
+# 删除新 GitLab 上的 Group（会级联删除其下所有项目），返回 HTTP 状态码
+gitlab_delete_group() {
+  local group_path=$1
+  local permanent=${2:-false}
+
+  local url="$NEW_GITLAB/api/v4/groups/$(urlencode "$group_path")"
+  if [[ "$permanent" == "true" ]]; then
+    url="${url}?permanently_remove=true"
+  fi
+
+  curl -s -o /dev/null -w "%{http_code}" \
+    --request DELETE \
+    --header "PRIVATE-TOKEN: $NEW_TOKEN" \
+    "$url"
+}
+
+# 从记录文件中移除一行（用于删除后同步 groups_created.txt / projects_created.txt）
+remove_line_from_file() {
+  local file=$1
+  local line=$2
+
+  [[ -f "$file" ]] || return 0
+  grep -Fxv "$line" "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+}
