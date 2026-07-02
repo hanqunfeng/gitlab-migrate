@@ -63,7 +63,7 @@ gitlab_rails['smtp_tls'] = false
 gitlab_rails['smtp_openssl_verify_mode'] = 'peer'
 
 ### 发件人信息
-gitlab_rails['gitlab_email_from'] = 'GitLab <gitlab@example.com>'
+gitlab_rails['gitlab_email_from'] = 'gitlab@example.com'
 gitlab_rails['gitlab_email_reply_to'] = 'noreply@example.com'
 ```
 
@@ -98,8 +98,8 @@ $ sudo gitlab-rails console
  PostgreSQL:   17.8
 ------------------------------------------------------------[ booted in 54.10s ]
 Loading production environment (Rails 7.2.3.1)
-gitlab(prod)> Notify.test_email('hanqf2008@163.com','test','hello world').deliver_now
-=> #<Mail::Message:1038020, Multipart: false, Headers: <Date: Thu, 02 Jul 2026 02:34:53 +0000>, <From: GitLab <18610375930@163.com>>, <Reply-To: GitLab <noreply@163.com>>, <To: hanqf2008@163.com>, <Message-ID: <6a45ce4d989a_465e433541806e@ip-172-31-26-12.us-west-2.compute.internal.mail>>, <Subject: test>, <MIME-Version: 1.0>, <Content-Type: text/html; charset=UTF-8>, <Content-Transfer-Encoding: 7bit>, <Auto-Submitted: auto-generated>, <X-Auto-Response-Suppress: All>>
+gitlab(prod)> Notify.test_email('hqf123456@163.com','test','hello world').deliver_now
+=> #<Mail::Message:1038020, Multipart: false, Headers: <Date: Thu, 02 Jul 2026 02:34:53 +0000>, <From: GitLab <1861345678@163.com>>, <Reply-To: GitLab <noreply@163.com>>, <To: hqf123456@163.com>, <Message-ID: <6a45ce4d989a_465e433541806e@ip-172-31-26-12.us-west-2.compute.internal.mail>>, <Subject: test>, <MIME-Version: 1.0>, <Content-Type: text/html; charset=UTF-8>, <Content-Transfer-Encoding: 7bit>, <Auto-Submitted: auto-generated>, <X-Auto-Response-Suppress: All>>
 gitlab(prod)> exit
 ```
 
@@ -111,6 +111,7 @@ gitlab(prod)> exit
 ## 常见邮件服务商示例
 
 ### 网易 163 邮箱
+> 163 邮箱本人亲测可用，其它邮箱未进行测试
 
 163 邮箱需先在网页端开启 SMTP 并生成**授权码**（设置 → POP3/SMTP/IMAP）。
 
@@ -129,13 +130,11 @@ gitlab_rails['smtp_enable_starttls_auto'] = false  # 启用 STARTTLS
 gitlab_rails['smtp_tls'] = true  # 使用 SSL 加密
 gitlab_rails['smtp_pool'] = false  # 禁用连接池
 
-gitlab_rails['gitlab_email_from'] = 'GitLab <yourname@163.com>' # 发件人地址，此处的email必须要与smtp_user_name配置的一致
-# 上面这种格式是将显示名称和发件人一起配置了，也可以分开配置
-# gitlab_rails['gitlab_email_from'] = '18610375930@163.com'  # 发件人地址
-# gitlab_rails['gitlab_email_display_name'] = 'GitLab' # 邮件显示名称
-
-gitlab_rails['gitlab_email_reply_to'] = 'yourname@163.com' # 回复邮件地址
+# 注意发件人不要写成 'GitLab <yourname@163.com>' 这种格式，否则重置密码邮件会发送失败
+gitlab_rails['gitlab_email_from'] = 'yourname@163.com' # 发件人地址，此处的email必须要与smtp_user_name配置的一致
+gitlab_rails['gitlab_email_reply_to'] = 'yourname@your-domain.com' # 回复邮件地址
 ```
+
 
 #### 163 开启 SMTP时要注意
 * 1.开起 SMTP 时，需要在 `设置` -- `邮箱安全设置` -- `安全性活动` 中对该操作进行确认
@@ -325,6 +324,39 @@ sudo gitlab-ctl reconfigure
 
 - 企业邮箱：在 DNS 配置 SPF、DKIM 记录
 - 个人邮箱：尽量让 `gitlab_email_from` 与 `smtp_user_name` 保持一致
+
+### SMTP 配置成功，但是用户忘记密码希望重置密码时就是不能收到邮件
+* 检查 `gitlab_rails['gitlab_email_from'] = 'GitLab <gitlab@company.com>'` 的格式，如果这种格式可以去掉 `GitLab <>` 试试
+* 测试
+```bash
+$ sudo gitlab-rails console
+--------------------------------------------------------------------------------
+ Ruby:         ruby 3.3.11 (2026-03-26 revision 1f2d15125a) [x86_64-linux]
+ GitLab:       19.1.1 (04cd8ad1a9c) FOSS
+ GitLab Shell: 14.54.0
+ PostgreSQL:   17.8
+------------------------------------------------------------[ booted in 43.25s ]
+Loading production environment (Rails 7.2.3.1)
+gitlab(prod)> user = User.find_by_email("qf_han@126.com")
+=> #<User id:13 @qf_han>
+gitlab(prod)> user.state
+=> "active"
+gitlab(prod)> token = user.send_reset_password_instructions # 此时会发送邮件
+=> "VaZz3cudMvPz6xdeWKR8"
+gitlab(prod)> mail = DeviseMailer.reset_password_instructions(user, token)
+=> 
+#<Mail::Message:1038780, Multipart: true, Headers: <From: GitLab <1861345678@163.com>>, <Reply-To: noreply@your-domain.com>, <To: qf_han@126.com>, <Subject: Reset password instruct...
+gitlab(prod)> puts mail.from.inspect
+gitlab(prod)> puts mail.reply_to.inspect
+gitlab(prod)> puts mail.to.inspect
+gitlab(prod)> puts mail.subject
+["1861345678@163.com"]
+["noreply@your-domain.com"]
+["qf_han@126.com"]
+Reset password instructions
+=> nil
+
+```
 
 ## 与迁移工具的关系
 
