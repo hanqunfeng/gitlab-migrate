@@ -19,10 +19,11 @@ fix_repos_txt
 
 echo "[INFO] STEP 4: mirror clone"
 
-while IFS='|' read -r group project repo || [[ -n "${group:-}" ]]; do
-  [[ -z "${group:-}" ]] && continue
+while IFS= read -r line || [[ -n "${line:-}" ]]; do
+  [[ -z "${line:-}" ]] && continue
+  read_repo_fields "$line"
 
-  dir="$group/$project.git"
+  dir="$REPO_NAMESPACE/$REPO_PROJECT.git"
 
   # 已 clone 过的目录跳过，支持断点续传
   if [ -d "$dir" ]; then
@@ -30,10 +31,10 @@ while IFS='|' read -r group project repo || [[ -n "${group:-}" ]]; do
     continue
   fi
 
-  echo "[CLONE] $repo"
+  echo "[CLONE] $REPO_URL"
 
   # 使用 OLD_TOKEN 认证；用户名 oauth2 为 GitLab PAT 惯例占位符
   git -c "credential.helper=!f() { echo \"username=oauth2\"; echo \"password=${OLD_TOKEN}\"; }; f" \
-    clone --mirror "$repo" "$dir"
+    clone --mirror "$REPO_URL" "$dir"
 
 done < repos.txt

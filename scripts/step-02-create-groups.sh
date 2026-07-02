@@ -2,12 +2,11 @@
 #
 # 步骤 2: 在新 GitLab 创建 Group
 #
-# 从 repos.txt 提取所有唯一的 group（namespace），在新 GitLab 上逐个创建。
-# 已存在的 group 会跳过（幂等）。
+# 仅为 namespace_kind=group 的命名空间创建 Group；个人项目（user）跳过。
 #
 # 依赖: curl, jq
 # 输入: gitlab-migration/repos.txt
-# 输出: gitlab-migration/groups_created.txt（本次新创建的 group 记录）
+# 输出: gitlab-migration/groups_created.txt
 #
 
 set -euo pipefail
@@ -17,28 +16,39 @@ load_config
 init_workdir
 fix_repos_txt
 
-echo "[INFO] STEP 2: Creating groups..."
+NEW_API=$(resolve_api_version new)
 
-# 使用进程替换而非管道，避免 while 在子 shell 中运行导致副作用异常
-while read -r group || [[ -n "${group:-}" ]]; do
-  [[ -z "${group:-}" ]] && continue
+echo "[INFO] STEP 2: Creating groups (skip user namespaces)..."
 
-  echo "[GROUP] $group"
+declare -A processed_groups
 
-  # 模糊搜索 group 是否已存在
+while IFS= read -r line || [[ -n "${line:-}" ]]; do
+  [[ -z "${line:-}" ]] && continue
+  read_repo_fields "$line"
+
+  if [[ "$REPO_KIND" == "user" ]]; then
+    echo "[SKIP] user namespace, no group: $REPO_NAMESPACE/$REPO_PROJECT"
+    continue
+  fi
+
+  [[ -n "${processed_groups[$REPO_NAMESPACE]:-}" ]] && continue
+  processed_groups["$REPO_NAMESPACE"]=1
+
+  echo "[GROUP] $REPO_NAMESPACE"
+
   exists=$(curl -s --header "PRIVATE-TOKEN: $NEW_TOKEN" \
-    "$NEW_GITLAB/api/v4/groups?search=$group" | jq 'length // 0')
+    "$NEW_GITLAB/api/${NEW_API}/groups?search=$REPO_NAMESPACE" | jq 'length // 0')
 
   if [[ "$exists" -eq 0 ]]; then
     curl -s --request POST \
       --header "PRIVATE-TOKEN: $NEW_TOKEN" \
-      --data "name=$group&path=$group" \
-      "$NEW_GITLAB/api/v4/groups" > /dev/null
+      --data "name=$REPO_NAMESPACE&path=$REPO_NAMESPACE" \
+      "$NEW_GITLAB/api/${NEW_API}/groups" > /dev/null
 
-    echo "$group" >> groups_created.txt
-    echo "[CREATED] group: $group"
+    echo "$REPO_NAMESPACE" >> groups_created.txt
+    echo "[CREATED] group: $REPO_NAMESPACE"
   else
-    echo "[SKIP] group exists: $group"
+    echo "[SKIP] group exists: $REPO_NAMESPACE"
   fi
 
-done < <(cut -d'|' -f1 repos.txt | sort -u)
+done < repos.txt
