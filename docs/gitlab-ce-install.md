@@ -196,5 +196,5 @@ sudo ausearch -m avc -ts recent
 
 ## 参考链接
 
-- [GitLab CE 官方安装文档（RHEL/CentOS）](https://about.gitlab.com/install/?os=centos)
+- [GitLab 官方安装文档](https://docs.gitlab.com/install/package/amazonlinux_2023/)
 - [GitLab 配置参考 `gitlab.rb`](https://docs.gitlab.com/omnibus/settings/configuration.html)
