@@ -190,8 +190,6 @@ group|ios|vault-ios|https://gitlab.example.com/ios/vault-ios.git
 user|hanqunfeng|wifitest|https://gitlab.example.com/hanqunfeng/wifitest.git
 ```
 
-> 兼容旧版 3 列格式 `namespace|project|url`，默认当作 `group` 处理。重新执行步骤 1 可生成新格式。
-
 ### Group 项目 vs 个人项目
 
 GitLab 中 **username 与 Group 的顶级 path 不能重名**。个人项目（如 `hanqunfeng/wifitest`）的 namespace 是用户，**不应**为其创建 Group。
