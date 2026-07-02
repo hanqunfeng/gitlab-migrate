@@ -51,6 +51,12 @@ chmod +x gitlab-migrate.sh gitlab-migrate-users.sh scripts/*.sh
 
 > 若源实例含**个人项目**（如 `hanqunfeng/wifitest`），推荐顺序见下文 [含个人项目的推荐流程](#含个人项目的推荐流程)。
 
+## 文档
+
+- [GitLab CE 安装指南](docs/gitlab-ce-install.md)
+- [GitLab 配置 HTTPS 证书指南](docs/gitlab-https-cert.md)
+- [GitLab 邮件功能配置指南](docs/gitlab-email-config.md)
+
 ## 目录结构
 
 ```
