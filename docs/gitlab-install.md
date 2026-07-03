@@ -54,7 +54,6 @@ EXTERNAL_URL="https://gitlab.example.com"
 ```
 
 > `EXTERNAL_URL` 在安装时写入配置，后续修改需执行 `gitlab-ctl reconfigure`。
-> 首次安装时，如果 `EXTERNAL_URL` 是https协议，会基于` Let’s Encrypt` 自动签发证书
 
 ### 2. 开放防火墙端口（如启用 firewalld）
 
@@ -96,6 +95,7 @@ sudo EXTERNAL_URL="http://192.168.1.100" dnf install -y gitlab-ce
 # 或使用域名（推荐生产环境，并配置 HTTPS）
 sudo EXTERNAL_URL="https://gitlab.example.com" dnf install -y gitlab-ce
 ```
+> 首次安装时，如果 `EXTERNAL_URL` 是https协议，会基于` Let’s Encrypt` 自动签发证书
 
 ### 方式二：GitLab EE（企业版）
 
