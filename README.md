@@ -205,8 +205,8 @@ namespace_kind|namespace|project|http_url_to_repo
 示例：
 
 ```
-group|android|nqms|https://gitlab.example.com/android/nqms.git
-group|ios|vault-ios|https://gitlab.example.com/ios/vault-ios.git
+group|android|tool|https://gitlab.example.com/android/tool.git
+group|ios|tool-ios|https://gitlab.example.com/ios/tool-ios.git
 user|hanqunfeng|wifitest|https://gitlab.example.com/hanqunfeng/wifitest.git
 ```
 

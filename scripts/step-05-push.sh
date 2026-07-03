@@ -21,7 +21,7 @@ echo "[INFO] STEP 5: push to new GitLab"
 push_repo() {
   local dir=${1#./}  # 去掉 find 输出的 ./ 前缀
 
-  # 从路径解析 group 和 project，如 android/nqms.git -> group=android, project=nqms
+  # 从路径解析 group 和 project，如 android/tool.git -> group=android, project=tool
   group=$(dirname "$dir")
   project=$(basename "$dir" .git)
 
