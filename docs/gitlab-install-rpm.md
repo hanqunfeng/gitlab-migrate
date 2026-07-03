@@ -2,6 +2,8 @@
 
 本文档介绍在 **RHEL / CentOS / Rocky Linux / AlmaLinux / Amazon Linux** 等使用 `dnf` 的 RPM 系系统上安装 GitLab，涵盖 **Community Edition（CE）**、**Enterprise Edition（EE）** 与 **极狐 GitLab（JH）** 三种发行版。
 
+> **Debian / Ubuntu** 等 APT 系系统请参见 [GitLab 安装指南（Debian / Ubuntu）](gitlab-install-deb.md)。
+
 > 若你正在搭建迁移目标实例，安装完成后可参考 [README](../README.md) 使用本仓库的迁移工具。
 
 ## CE、EE 与极狐（JH）的区别与联系
@@ -260,7 +262,7 @@ sudo ausearch -m avc -ts recent
 
 ## 参考链接
 
-- [GitLab CE 官方安装文档](https://docs.gitlab.com/install/package/amazonlinux_2023/)
+- [GitLab CE 官方安装文档](https://docs.gitlab.com/install/)
 - [GitLab EE 订阅与许可证](https://docs.gitlab.com/subscriptions/)
-- [极狐 GitLab 安装文档](https://gitlab.cn/docs/)
+- [极狐 GitLab 安装文档](https://gitlab.cn/docs/jh/install/)
 - [GitLab 配置参考 `gitlab.rb`](https://docs.gitlab.com/omnibus/settings/configuration.html)
