@@ -12,8 +12,13 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 load_config
 init_workdir
 
+success_count=0
+fail_count=0
+[[ -f success.log ]] && success_count=$(wc -l < success.log | tr -d ' ')
+[[ -f fail.log ]] && fail_count=$(wc -l < fail.log | tr -d ' ')
+
 echo "======================"
 echo "MIGRATION DONE"
-echo "Success: $(wc -l < success.log 2>/dev/null || echo 0)"
-echo "Failed : $(wc -l < fail.log 2>/dev/null || echo 0)"
+echo "Success: $success_count"
+echo "Failed : $fail_count"
 echo "======================"
