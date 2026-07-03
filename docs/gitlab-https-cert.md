@@ -2,7 +2,7 @@
 
 本文档介绍在 **Omnibus 安装的 GitLab CE/EE** 上配置 HTTPS 证书（GitLab 内置 Nginx），使 Web 访问与 Git over HTTP 均走 TLS。
 
-> 若尚未安装 GitLab，请先参考 [GitLab CE 安装指南](gitlab-ce-install.md)。
+> 若尚未安装 GitLab，请先参考 [GitLab 安装指南](gitlab-install.md)。
 
 ## 方案选择
 

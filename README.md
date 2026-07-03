@@ -53,7 +53,7 @@ chmod +x gitlab-migrate.sh gitlab-migrate-users.sh scripts/*.sh
 
 ## 文档
 
-- [GitLab CE 安装指南](docs/gitlab-ce-install.md)
+- [GitLab 安装指南（CE / EE / 极狐）](docs/gitlab-install.md)
 - [GitLab 配置 HTTPS 证书指南](docs/gitlab-https-cert.md)
 - [GitLab 邮件功能配置指南](docs/gitlab-email-config.md)
 

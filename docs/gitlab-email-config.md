@@ -2,7 +2,7 @@
 
 本文档介绍在 **Omnibus 安装的 GitLab CE** 上配置 SMTP 发信，使 GitLab 能够发送通知邮件、密码重置邮件、流水线结果通知等。
 
-> 若尚未安装 GitLab，请先参考 [GitLab CE 安装指南](gitlab-ce-install.md)。
+> 若尚未安装 GitLab，请先参考 [GitLab 安装指南](gitlab-install.md)。
 
 ## 为什么需要配置邮件
 
@@ -367,7 +367,7 @@ Reset password instructions
 | 用户收到重置密码邮件，可自行设密 | 需管理员在后台手动重置密码 |
 | 成员同步后可收到项目通知 | 通知功能不可用 |
 
-建议在完成 [GitLab CE 安装](gitlab-ce-install.md) 后、执行 `gitlab-migrate-users.sh 2` 之前完成邮件配置。
+建议在完成 [GitLab 安装](gitlab-install.md) 后、执行 `gitlab-migrate-users.sh 2` 之前完成邮件配置。
 
 ## 参考链接
 
