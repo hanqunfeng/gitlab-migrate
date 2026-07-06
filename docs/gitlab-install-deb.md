@@ -127,12 +127,83 @@ sudo EXTERNAL_URL="https://gitlab.example.com" apt install -y gitlab-ee
 
 ### 方式三：极狐 GitLab JH（国内用户）
 
-极狐使用境内软件源，国内网络下载更快。DEB 系上极狐官方文档使用 `gitlab-ee` 作为包名（来自极狐源，与国际版 EE 包名相同但源不同）。
+极狐使用境内软件源，国内网络下载更快。
+
+* 国内极狐提供了基于nexus搭建的仓库地址：[https://packages.gitlab.cn/#browse/browse](https://packages.gitlab.cn/#browse/browse)
+
+| 仓库名称            | 类型     | 包格式 | 对应操作系统                             | 是否推荐   |
+| --------------- | ------ | --- | ---------------------------------- | ------ |
+| amazon          | hosted | yum | Amazon Linux 2 / Amazon Linux 2023 | ✅      |
+| el              | hosted | yum | RHEL / Rocky / AlmaLinux / CentOS  | ✅      |
+| ubuntu-bionic   | hosted | apt | Ubuntu 18.04                       | 已过期    |
+| ubuntu-focal    | hosted | apt | Ubuntu 20.04                       | 推荐     |
+| ubuntu-jammy    | hosted | apt | Ubuntu 22.04                       | 推荐     |
+| ubuntu-noble    | hosted | apt | Ubuntu 24.04                       | **推荐** |
+| ubuntu-xenial   | hosted | apt | Ubuntu 16.04                       | 已过期    |
+| debian-buster   | hosted | apt | Debian 10                          | 老版本    |
+| debian-bullseye | hosted | apt | Debian 11                          | 推荐     |
+| debian-bookworm | hosted | apt | Debian 12                          | 推荐     |
+| debian-trixie   | hosted | apt | Debian 13                          | 最新     |
+| debian-stretch  | hosted | apt | Debian 9                           | 已过期    |
+| raw             | hosted | raw | 相关文件下载 ，比如仓库的认证key                            | key下载：gpg/public.gpg.key   |
+
 
 **步骤 1：添加极狐软件源**
 
 ```bash
-curl --location "https://packages.gitlab.cn/repository/raw/scripts/setup.sh" | sudo bash
+# 下载key
+sudo mkdir -p /etc/apt/keyrings
+
+curl -fsSL https://packages.gitlab.cn/repository/raw/gpg/public.gpg.key \
+| gpg --dearmor \
+| sudo tee /etc/apt/keyrings/gitlab.gpg >/dev/null
+
+# 设置软件源
+sudo tee /etc/apt/sources.list.d/gitlab.list >/dev/null <<EOF
+deb [signed-by=/etc/apt/keyrings/gitlab.gpg] https://packages.gitlab.cn/repository/ubuntu-noble noble main
+EOF
+
+# 实际上不下载key可以进行后续的安装，只不过 apt update 时会有警告
+sudo tee /etc/apt/sources.list.d/gitlab.list >/dev/null <<EOF
+deb [trusted=yes] https://packages.gitlab.cn/repository/ubuntu-noble noble main
+EOF
+
+
+
+# 更新
+sudo apt update
+
+# 查询
+$ apt-cache search gitlab
+gitlab-jh - GitLab JH Edition (including NGINX, Postgres, Redis)
+glab - commandline interface for gitlab instances
+libdmx-dev - X11 Distributed Multihead extension library (development headers)
+………………
+
+# 查看最新的版本信息
+$ apt show gitlab-jh
+Package: gitlab-jh
+Version: 19.1.1-jh.0
+Priority: extra
+Section: misc
+Maintainer: JiHu(GitLab) <support@gitlab.cn>
+Installed-Size: 4598 MB
+Depends: openssh-server, perl
+Conflicts: gitlab-ce, gitlab-ee, gitlab-fips, gitlab
+Replaces: gitlab-ce, gitlab-ee, gitlab-fips, gitlab
+Homepage: https://about.gitlab.cn/
+License: MIT
+Vendor: JiHu(GitLab) <support@gitlab.cn>
+Download-Size: 1198 MB
+APT-Sources: https://packages.gitlab.cn/repository/ubuntu-noble noble/main amd64 Packages
+Description: GitLab JH Edition (including NGINX, Postgres, Redis)
+
+# 查看有哪些可用版本
+$ apt-cache madison gitlab-jh
+ gitlab-jh | 19.1.1-jh.0 | https://packages.gitlab.cn/repository/ubuntu-noble noble/main amd64 Packages
+ gitlab-jh | 19.1.0-jh.0 | https://packages.gitlab.cn/repository/ubuntu-noble noble/main amd64 Packages
+ gitlab-jh | 19.0.3-jh.0 | https://packages.gitlab.cn/repository/ubuntu-noble noble/main amd64 Packages
+ …………
 ```
 
 **步骤 2：安装极狐 GitLab**
