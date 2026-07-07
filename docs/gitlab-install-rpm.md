@@ -121,10 +121,76 @@ sudo EXTERNAL_URL="http://gitlab.example.com" dnf install -y gitlab-ee
 极狐使用境内软件源 `packages.gitlab.cn`，国内网络下载更快，界面与文档提供中文支持。
 
 **步骤 1：添加极狐软件源**
-
+* 最简单的方式，该脚本会自动判断当前操作系统类型及版本，并自动配置仓库
 ```bash
 curl --location "https://packages.gitlab.cn/repository/raw/scripts/setup.sh" | sudo bash
 ```
+* 也可以手工配置，使用极狐中国官方提供的仓库源，国内极狐提供了基于nexus搭建的仓库地址：[https://packages.gitlab.cn/#browse/browse](https://packages.gitlab.cn/#browse/browse)
+
+| 仓库名称            | 类型     | 包格式 | 对应操作系统                   | 是否推荐   |
+| --------------- | ------ | --- | ---------------------------------- | ------ |
+| amazon          | hosted | yum | Amazon Linux 2023                  | ✅      |
+| el              | hosted | yum | RHEL / Rocky / AlmaLinux / CentOS  | ✅      |
+| ubuntu-bionic   | hosted | apt | Ubuntu 18.04                       | 已过期    |
+| ubuntu-focal    | hosted | apt | Ubuntu 20.04                       | 推荐     |
+| ubuntu-jammy    | hosted | apt | Ubuntu 22.04                       | 推荐     |
+| ubuntu-noble    | hosted | apt | Ubuntu 24.04                       | **推荐** |
+| ubuntu-xenial   | hosted | apt | Ubuntu 16.04                       | 已过期    |
+| debian-buster   | hosted | apt | Debian 10                          | 老版本    |
+| debian-bullseye | hosted | apt | Debian 11                          | 推荐     |
+| debian-bookworm | hosted | apt | Debian 12                          | 推荐     |
+| debian-trixie   | hosted | apt | Debian 13                          | 最新     |
+| debian-stretch  | hosted | apt | Debian 9                           | 已过期    |
+| raw        | hosted | raw | 相关文件下载 ，比如仓库密钥| key下载：gpg/public.gpg.key   |
+
+> el，目前`el10`的签名存在问题，暂不可用，等待官方修复
+
+| 仓库名称                      | 含义                  | 对应操作系统         |
+| ------------------------- | ------------------- | --------- |
+| **el7**                   | Enterprise Linux 7  | RHEL 7、CentOS 7、Oracle Linux 7                            |
+| **el8**        | Enterprise Linux 8  | RHEL 8、Rocky 8、AlmaLinux 8、CentOS Stream 8、Oracle Linux 8 |
+| **el9** | Enterprise Linux 9  | RHEL 9、Rocky 9、AlmaLinux 9、CentOS Stream 9、Oracle Linux 9 |
+| **el10**      | Enterprise Linux 10 | RHEL 10、Rocky 10（未来）、AlmaLinux 10   |
+
+
+```bash
+# 创建仓库文件
+$ sudo tee /etc/yum.repos.d/gitlab.repo > /dev/null <<'EOF'
+[gitlab]
+name=GitLab
+baseurl=https://packages.gitlab.cn/repository/el/9/
+enabled=1
+gpgcheck=1
+gpgkey=https://packages.gitlab.cn/repository/raw/gpg/public.gpg.key
+EOF
+```
+
+> amazon，根据cpu架构进行配置
+```bash
+# 创建仓库文件
+$ sudo tee /etc/yum.repos.d/gitlab.repo > /dev/null <<'EOF'
+[gitlab]
+name=GitLab
+baseurl=https://packages.gitlab.cn/repository/amazon/2023/x86_64/
+enabled=1
+gpgcheck=1
+gpgkey=https://packages.gitlab.cn/repository/raw/gpg/public.gpg.key
+EOF
+```
+
+```bash
+# 刷新仓库缓存
+sudo dnf clean all
+sudo dnf makecache
+
+# 搜索gitlab相关包名
+sudo dnf search gitlab
+
+# 查看都有哪些版本可供选择
+sudo dnf --showduplicates list gitlab-jh
+```
+
+
 
 **步骤 2：安装极狐 GitLab**
 
@@ -138,6 +204,13 @@ sudo EXTERNAL_URL="http://gitlab.example.com" dnf install -y gitlab-jh
 ---
 
 无论安装哪种版本，安装过程都会自动执行 `gitlab-ctl reconfigure`，首次配置可能需要数分钟，请耐心等待。
+
+* 即使配置了仓库源，也可能会出现各种各样的问题导致无法正常下载和安装，此时可以直接下载对应的 RPM 包进行安装，比如：
+```bash
+wget https://packages.gitlab.cn/repository/el/9/gitlab-jh-19.1.1-jh.0.el9.x86_64.rpm
+
+sudo EXTERNAL_URL="http://gitlab.example.com" dnf install ./gitlab-jh-19.1.1-jh.0.el9.x86_64.rpm
+```
 
 ### 步骤 3：查看初始 root 密码
 

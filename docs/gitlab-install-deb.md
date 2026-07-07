@@ -129,11 +129,18 @@ sudo EXTERNAL_URL="https://gitlab.example.com" apt install -y gitlab-ee
 
 极狐使用境内软件源，国内网络下载更快。
 
-* 国内极狐提供了基于nexus搭建的仓库地址：[https://packages.gitlab.cn/#browse/browse](https://packages.gitlab.cn/#browse/browse)
+**步骤 1：添加极狐软件源**
+* 最简单的方式，该脚本会自动判断当前操作系统类型及版本，并自动配置仓库
+```bash
+curl --location "https://packages.gitlab.cn/repository/raw/scripts/setup.sh" | sudo bash
+```
 
-| 仓库名称            | 类型     | 包格式 | 对应操作系统                             | 是否推荐   |
+* 也可以手工配置，使用极狐中国官方提供的仓库源，国内极狐提供了基于nexus搭建的仓库地址：[https://packages.gitlab.cn/#browse/browse](https://packages.gitlab.cn/#browse/browse)
+
+
+| 仓库名称            | 类型     | 包格式 | 对应操作系统                   | 是否推荐   |
 | --------------- | ------ | --- | ---------------------------------- | ------ |
-| amazon          | hosted | yum | Amazon Linux 2 / Amazon Linux 2023 | ✅      |
+| amazon          | hosted | yum | Amazon Linux 2023                  | ✅      |
 | el              | hosted | yum | RHEL / Rocky / AlmaLinux / CentOS  | ✅      |
 | ubuntu-bionic   | hosted | apt | Ubuntu 18.04                       | 已过期    |
 | ubuntu-focal    | hosted | apt | Ubuntu 20.04                       | 推荐     |
@@ -145,25 +152,22 @@ sudo EXTERNAL_URL="https://gitlab.example.com" apt install -y gitlab-ee
 | debian-bookworm | hosted | apt | Debian 12                          | 推荐     |
 | debian-trixie   | hosted | apt | Debian 13                          | 最新     |
 | debian-stretch  | hosted | apt | Debian 9                           | 已过期    |
-| raw             | hosted | raw | 相关文件下载 ，比如仓库的认证key                            | key下载：gpg/public.gpg.key   |
-
-
-**步骤 1：添加极狐软件源**
+| raw        | hosted | raw | 相关文件下载 ，比如仓库密钥| key下载：gpg/public.gpg.key   |
 
 ```bash
-# 下载key
+# 下载仓库密钥
 sudo mkdir -p /etc/apt/keyrings
 
 curl -fsSL https://packages.gitlab.cn/repository/raw/gpg/public.gpg.key \
 | gpg --dearmor \
 | sudo tee /etc/apt/keyrings/gitlab.gpg >/dev/null
 
-# 设置软件源
+# 设置软件源，根据你的系统版本进行设置
 sudo tee /etc/apt/sources.list.d/gitlab.list >/dev/null <<EOF
 deb [signed-by=/etc/apt/keyrings/gitlab.gpg] https://packages.gitlab.cn/repository/ubuntu-noble noble main
 EOF
 
-# 实际上不下载key可以进行后续的安装，只不过 apt update 时会有警告
+# 实际上不下载仓库密钥也可以进行后续的安装，按如下方式配置，只不过 apt update 时会有警告
 sudo tee /etc/apt/sources.list.d/gitlab.list >/dev/null <<EOF
 deb [trusted=yes] https://packages.gitlab.cn/repository/ubuntu-noble noble main
 EOF
