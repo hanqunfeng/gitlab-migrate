@@ -143,7 +143,7 @@ curl --location "https://packages.gitlab.cn/repository/raw/scripts/setup.sh" | s
 | debian-stretch  | hosted | apt | Debian 9                           | 已过期    |
 | raw        | hosted | raw | 相关文件下载 ，比如仓库密钥| key下载：gpg/public.gpg.key   |
 
-> el，目前`el10`的签名存在问题，暂不可用，等待官方修复
+> el：el在安装过程中有可能会遇到各种问题，建议直接通过rpm包安装，下面有介绍
 
 | 仓库名称                      | 含义                  | 对应操作系统         |
 | ------------------------- | ------------------- | --------- |
@@ -205,7 +205,9 @@ sudo EXTERNAL_URL="http://gitlab.example.com" dnf install -y gitlab-jh
 
 无论安装哪种版本，安装过程都会自动执行 `gitlab-ctl reconfigure`，首次配置可能需要数分钟，请耐心等待。
 
-* 即使配置了仓库源，也可能会出现各种各样的问题导致无法正常下载和安装，此时可以直接下载对应的 RPM 包进行安装，比如：
+---
+
+* 即使配置了仓库源，也可能会出现各种各样的问题导致无法正常下载和安装(比如 el 系列)，此时可以直接下载对应的 RPM 包进行安装，比如：
 ```bash
 wget https://packages.gitlab.cn/repository/el/9/gitlab-jh-19.1.1-jh.0.el9.x86_64.rpm
 
