@@ -51,6 +51,11 @@ sudo gitlab-psql
 \dt
 \dv
 
+-- 查看 PostgreSQL 角色（用户）
+\du
+-- 可以登录的用户
+SELECT rolname FROM pg_roles WHERE rolcanlogin;
+
 -- 查看表结构（含索引等）
 \d users
 \d+ projects
