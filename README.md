@@ -76,6 +76,11 @@ chmod +x gitlab-migrate.sh gitlab-migrate-users.sh scripts/*.sh
 - [GitLab 安装指南（Debian / Ubuntu，DEB 系）](docs/gitlab-install-deb.md)
 - [GitLab 配置 HTTPS 证书指南](docs/gitlab-https-cert.md)
 - [GitLab 邮件功能配置指南](docs/gitlab-email-config.md)
+- [GitLab `gitlab-rake` 常用命令速查](docs/gitlab-rake-commands.md)
+- [GitLab `gitlab-ctl` 常用命令速查](docs/gitlab-ctl-commands.md)
+- [GitLab `gitlab-rails` 常用命令速查](docs/gitlab-rails-commands.md)
+- [GitLab `gitlab-psql` 常用命令速查](docs/gitlab-psql-commands.md)
+- [GitLab `gitlab-redis-cli` 常用命令速查](docs/gitlab-redis-cli-commands.md)
 
 ## 目录结构
 
