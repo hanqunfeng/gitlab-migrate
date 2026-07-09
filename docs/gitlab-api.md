@@ -22,7 +22,7 @@
 curl -s --header "PRIVATE-TOKEN: $TOKEN" \
   "$GITLAB/api/v4/version" | jq .
 
-# 探测 v3（仅旧实例可能成功）
+# 探测 v3（仅旧实例可能成功，gitlab 8.13 以后才加入 /version 这个接口）
 curl -s --header "PRIVATE-TOKEN: $TOKEN" \
   "$GITLAB/api/v3/version" | jq .
 ```
