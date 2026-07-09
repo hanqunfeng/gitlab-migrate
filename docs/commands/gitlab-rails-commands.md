@@ -60,6 +60,15 @@ sudo gitlab-rails runner -e production 'puts Gitlab::VERSION'
 
 # 查找指定用户名是否存在
 sudo gitlab-rails runner -e production 'u=User.find_by_username("root"); puts(u ? "found: #{u.id} #{u.email} #{u.state}" : "not found")'
+# 查询email对应的用户信息
+sudo gitlab-rails runner '
+u = User.find_by(email: "youremail@xxxx.com")
+puts "ID: #{u.id}"
+puts "Username: #{u.username}"
+puts "Name: #{u.name}"
+puts "Email: #{u.email}"
+puts "State: #{u.state}"
+'
 
 # 统计活跃用户数
 sudo gitlab-rails runner -e production 'puts User.active.count'

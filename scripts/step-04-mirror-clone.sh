@@ -1,13 +1,33 @@
 #!/usr/bin/env bash
 #
-# 步骤 4: Mirror Clone 源仓库
+# 步骤 4：Mirror clone 源仓库到本地（生成裸仓库目录）
 #
-# 从旧 GitLab 以 --mirror 方式克隆裸仓库到本地 WORKDIR。
-# 目录结构: {group}/{project}.git/
+# 目标：
+# - 读取 repos.txt 中的 http_url_to_repo，对每个项目执行 `git clone --mirror`
+# - mirror 裸仓库会包含所有 refs（branches/tags）与远端配置，适合后续 `git push --mirror`
 #
-# 依赖: git, jq（config.sh）
-# 输入: gitlab-migration/repos.txt
-# 输出: gitlab-migration/{group}/{project}.git/
+# 输入文件（位于 WORKDIR，默认 `./gitlab-migration`）：
+# - repos.txt
+#
+# 输出目录（位于 WORKDIR）：
+# - {namespace}/{project}.git/（裸仓库目录，namespace 可能是 group path 或 username）
+#
+# 依赖：
+# - git
+# - curl/jq 不直接使用，但依赖 `scripts/config.sh` 里的 token 等配置
+#
+# 认证方式：
+# - 使用 `OLD_TOKEN` 通过 GitLab 的 HTTP Basic 方式鉴权
+# - 用户名固定用 `oauth2`（GitLab 对 PAT 的常见占位用户名），密码为 token
+# - 脚本不会在日志中输出 token
+#
+# 行为与重跑语义：
+# - 若本地目标目录已存在则 [SKIP] 并跳过；可安全重跑（断点续传）
+# - clone 过程中中断/失败可能留下不完整裸仓库目录，建议删除该目录后重试
+#
+# 注意：
+# - 该步骤对旧实例只有读操作，但会产生大量网络与磁盘 IO（仓库大/数量多时耗时明显）
+# - 若旧实例启用了自签证书，可能需要在 git/curl 层面额外处理证书信任
 #
 
 set -euo pipefail

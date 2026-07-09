@@ -1,8 +1,30 @@
 #!/usr/bin/env bash
 #
-# GitLab 迁移 — 共享工具函数
+# GitLab 迁移 — 共享工具函数库（被所有 step 脚本 source）
 #
-# 所有步骤脚本 source 本文件，并通过 load_config 加载用户配置。
+# 本文件集中放置“跨脚本复用”的能力，目标是：
+# - 统一配置加载（scripts/config.sh）
+# - 统一工作目录初始化（WORKDIR）
+# - 统一 repos.txt 解析（兼容历史格式）
+# - 统一 API 版本解析（old/new）
+# - 统一 GitLab API 请求与 JSON 校验（避免 HTML 重定向/非 JSON 响应导致脚本误判）
+# - 统一 members 分页拉取逻辑（兼容 v3/v4 差异，并避免旧版忽略 page 参数导致死循环）
+#
+# 约定：
+# - 运行时工作目录由 `config.sh` 的 WORKDIR 控制（默认 `./gitlab-migration`）
+# - 所有 step 脚本都会 `init_workdir` 后在工作目录内读写 repos.txt/users.txt 等文件
+# - 本文件不直接“执行步骤”，只提供函数
+#
+# 常用函数速览：
+# - load_config                 加载 scripts/config.sh（不存在则提示复制模板）
+# - init_workdir                创建并进入 WORKDIR
+# - fix_repos_txt               修复 repos.txt 末尾无换行导致 while read 漏行的问题
+# - read_repo_fields            解析 repos.txt 行，输出到 REPO_* 变量（兼容旧格式）
+# - resolve_api_version         读取 OLD_GITLAB_API_VERSION / NEW_GITLAB_API_VERSION
+# - urlencode                   URL 编码（GitLab API 路径参数必须编码斜杠）
+# - gitlab_curl_json            发起 API 请求并校验 JSON（检测登录页/重定向）
+# - gitlab_fetch_members        拉取 members/members(all) 的分页列表（逐行输出 JSON 对象）
+# - resolve_user_namespace_id   解析目标实例用户 namespace_id（用于创建个人项目）
 #
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -65,12 +87,16 @@ infer_namespace_kind() {
   local namespace_json=$1
   local kind owner_id
 
+  # v4: namespace.kind 会明确给出 group/user
   kind=$(echo "$namespace_json" | jq -r '.kind // empty')
   if [[ -n "$kind" ]]; then
     echo "$kind"
     return 0
   fi
 
+  # v3（以及部分旧响应）可能没有 kind，需要通过 owner_id 推断：
+  # - owner_id 为空：更像 group namespace
+  # - owner_id 有值：更像 user namespace（个人项目）
   owner_id=$(echo "$namespace_json" | jq -r '.owner_id // "null"')
   if [[ "$owner_id" == "null" || -z "$owner_id" ]]; then
     echo "group"
@@ -136,12 +162,18 @@ gitlab_curl_json() {
     --header "PRIVATE-TOKEN: $token" \
     "${gitlab_url}/api/${api_version}${api_path}")
 
+  # 迁移脚本依赖 JSON；但在以下场景 GitLab/反向代理常返回 HTML：
+  # - Token 无效或权限不足，被重定向到登录页
+  # - API 版本不匹配（例如对 11+ 访问 v3）
+  # - 路径未 URL 编码（group/project 的斜杠导致路由错误/重定向）
+  # 因此这里做“快速 HTML 识别”，避免把 HTML 当 JSON 继续 jq 解析。
   if [[ "$resp" == \<html* ]] || [[ "$resp" == *"You are being"* ]]; then
     echo "[ERROR] API 返回 HTML 重定向，而非 JSON: ${gitlab_url}/api/${api_version}${api_path}" >&2
     echo "[ERROR] 常见原因: group/project 路径未 URL 编码，或 API 版本与实例不匹配" >&2
     return 1
   fi
 
+  # 严格校验 JSON：如果不是 JSON，直接报错并打印响应片段，方便定位权限/网关报错。
   if ! echo "$resp" | jq -e . >/dev/null 2>&1; then
     echo "[ERROR] API 返回非 JSON: ${gitlab_url}/api/${api_version}${api_path}" >&2
     echo "[ERROR] 响应片段: ${resp:0:200}" >&2
@@ -173,7 +205,11 @@ gitlab_fetch_members() {
 
     echo "$resp" | jq -c '.[]'
 
-    # 不足一页视为最后一页（旧版 v3 可能忽略 page 参数，避免死循环）
+    # 不足一页视为最后一页：
+    # - 大多数端点会在最后一页返回 < per_page 的数量
+    # - 更关键的是：旧版 v3 有时会忽略 page 参数，导致每次都返回同一页（永远 length==100）
+    #   这里用“<100 则停止”的策略避免死循环；代价是如果服务端真的总是 100/页但最后一页也 100，
+    #   可能需要改用响应头分页信息（但旧版并不总提供），因此当前策略更偏“迁移稳定性优先”。
     [[ "$count" -lt 100 ]] && break
     page=$((page + 1))
   done

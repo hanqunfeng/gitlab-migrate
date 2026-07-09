@@ -1,13 +1,40 @@
 #!/usr/bin/env bash
 #
-# 用户迁移步骤 3: 同步 Group 与 Project 成员关系
+# 用户迁移步骤 3：同步 Group 与 Project 成员关系到新实例
 #
-# 先从旧实例拉取各 Group 的直接成员并写入新实例，
-# 再同步各 Project 的直接成员（可覆盖/提升 Group 继承的权限级别）。
+# 目标：
+# - 从旧实例读取成员列表（read）：Group/Project 的直接成员
+# - 向新实例写入成员关系（write）：尽量复刻旧实例的 access_level / expires_at
+# - 对已存在成员：若现有权限 >= 目标权限则跳过；否则尝试提升
 #
-# 依赖: curl, jq
-# 输入: gitlab-migration/repos.txt, users_mapped.txt
-# 输出: gitlab-migration/members_fail.log
+# 为什么先同步 Group 再同步 Project：
+# - Group 成员是多数权限继承的来源（很多项目的权限来自 group）
+# - 再同步 Project 直接成员可以覆盖/提升继承权限（例如某人是 group Developer，但在某项目是 Maintainer）
+#
+# 输入文件（位于 WORKDIR，默认 `./gitlab-migration`）：
+# - repos.txt：项目清单（来自 `./gitlab-migrate.sh 1`）
+# - users_mapped.txt：旧 id → 新 id 映射（来自 `./gitlab-migrate-users.sh 2`）
+#
+# 输出文件（位于 WORKDIR）：
+# - members_fail.log：写入成员失败的详细错误（包含 API message/error）
+#
+# 依赖：
+# - curl、jq
+#
+# 权限与前置条件：
+# - 目标实例的对应 group/project 必须已存在（建议先完成 `./gitlab-migrate.sh 2 3`）
+# - `NEW_TOKEN` 需要有管理员权限或足够的成员管理权限（能 POST/PUT members）
+#
+# 重跑语义：
+# - 可重复执行：
+#   - 已存在且权限足够的成员会被跳过
+#   - 权限不足的成员会再次尝试提升
+# - members_fail.log 每次执行会被清空重写（方便定位“本次”失败项）
+#
+# 常见失败原因（members_fail.log 可见）：
+# - 用户未创建/映射缺失（users_mapped.txt 找不到 old_id）
+# - 目标资源不存在（group/project path 不存在或编码不正确）
+# - NEW_TOKEN 权限不足（无法管理成员）
 #
 
 set -euo pipefail
@@ -38,6 +65,8 @@ echo "[INFO] USER STEP 3: Syncing members (read api/${OLD_API}, write api/${NEW_
 # 根据旧 user id 查新 user id
 map_user_id() {
   local old_id=$1
+  # users_mapped.txt 的格式：old_id|new_id|username|email
+  # 这里用 awk 做一次“快速查表”，避免每条成员都用 curl 查询新实例（大幅降低 API 压力）。
   awk -F'|' -v id="$old_id" '$1 == id { print $2; exit }' users_mapped.txt
 }
 
@@ -58,6 +87,10 @@ add_member() {
   local base_url="$NEW_GITLAB/api/${NEW_API}/${resource_type}/$(urlencode "$resource_path")/members"
   local member_url="${base_url}/${new_user_id}"
 
+  # 先 GET 一次成员详情，判断是否已存在以及当前 access_level：
+  # - 若已存在且当前权限 >= 目标权限：跳过（幂等）
+  # - 若已存在但权限更低：PUT 提升权限
+  # - 若不存在：POST 新增成员
   local current
   current=$(curl -s --header "PRIVATE-TOKEN: $NEW_TOKEN" "$member_url")
   local current_level
@@ -118,6 +151,8 @@ sync_members_for_resource() {
 
   echo "[${resource_type}] $resource_path"
 
+  # 旧实例 members API 返回的是“直接成员”。对于 v3 来说没有 members/all，
+  # 因此脚本按“先 group 再 project”的顺序同步，最大化还原权限体系。
   while IFS= read -r member; do
     [[ -z "$member" ]] && continue
 

@@ -1,13 +1,35 @@
 #!/usr/bin/env bash
 #
-# 用户迁移步骤 2: 在新实例创建本地用户
+# 用户迁移步骤 2：在新实例创建本地用户（生成 users_mapped.txt）
 #
-# 读取 users.txt，在新 GitLab 上创建用户；已存在则建立 ID 映射。
-# 新用户默认 reset_password=true，由 GitLab 发送密码重置邮件。
+# 目标：
+# - 读取步骤 1 生成的 users.txt
+# - 在新 GitLab 上创建用户账号；若用户已存在，则建立“旧 id → 新 id”映射
+# - 该映射文件将被步骤 3 用于成员同步（把旧实例成员的 user_id 映射到新实例 user_id）
 #
-# 依赖: curl, jq
-# 输入: gitlab-migration/users.txt
-# 输出: gitlab-migration/users_mapped.txt, users_created.txt
+# 输入文件（位于 WORKDIR，默认 `./gitlab-migration`）：
+# - users.txt：old_id|username|email|name|state
+#
+# 输出文件（位于 WORKDIR）：
+# - users_mapped.txt：old_id|new_id|username|email
+# - users_created.txt：本次新创建的用户名（用于审计/通知/回滚）
+#
+# 依赖：
+# - curl、jq
+#
+# 创建策略与安全性：
+# - 创建用户使用：reset_password=true + skip_confirmation=true
+#   - reset_password=true：由 GitLab 发送“重置密码”邮件（避免脚本直接生成/暴露初始密码）
+#   - skip_confirmation=true：跳过邮箱确认（便于批量迁移；前提是你信任 users.txt 的 email 来源）
+#
+# username 冲突处理（常见迁移坑）：
+# - GitLab 的 username 与顶级 group path 共享命名空间
+# - 如果目标实例上存在同名 Group（例如误把个人 namespace 当成 Group 创建），会导致无法创建同名用户
+# - 脚本会检测 group path 冲突并尝试备用 username（如 `${username}-user` 或 display_name）
+#
+# 重跑语义：
+# - 每次执行会覆盖 users_mapped.txt / users_created.txt
+# - 已存在用户会被映射并跳过创建；重复执行安全
 #
 
 set -euo pipefail
@@ -79,6 +101,10 @@ try_create_user() {
   local name=$3
   local http_code new_id
 
+  # 将创建用户接口的响应体落到临时文件，避免：
+  # - curl 输出与脚本 stdout 混杂（影响后续解析/日志阅读）
+  # - 失败时无法获取 message/error 细节
+  # 注意：这里固定写到 /tmp；如需更严格可用 mktemp + trap 清理。
   http_code=$(curl -s -o /tmp/gitlab_user_create_resp.json -w "%{http_code}" \
     --request POST \
     --header "PRIVATE-TOKEN: $NEW_TOKEN" \
@@ -153,11 +179,16 @@ while IFS='|' read -r old_id username email name _state || [[ -n "${old_id:-}" ]
 
   resolved=false
   if [[ "$username_taken" == "true" ]]; then
+    # 先再查一遍“是否其实已存在”（并发创建、或前一步创建成功但本地判断失败等边缘场景）
     alt_id=$(find_new_user_id "$username" "$email" || true)
     if [[ -n "$alt_id" ]]; then
       map_existing_user "$old_id" "$alt_id" "$username" "$email" "user exists (found after conflict)"
       resolved=true
     else
+      # 备用 username 策略：
+      # - 优先 display_name（若可用且不等于 username）
+      # - 再尝试 `${username}-user`
+      # 用于绕过“username 与 group 顶级 path 冲突”或“用户名被占用”的问题。
       while read -r alt_username; do
         [[ -z "$alt_username" || "$alt_username" == "$username" ]] && continue
         [[ "$(find_new_user_id "$alt_username" "$email" || true)" != "" ]] && continue

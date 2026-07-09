@@ -1,12 +1,25 @@
 #!/usr/bin/env bash
 #
-# GitLab 迁移 — 配置模板
+# GitLab 迁移 — 配置模板（复制为 config.sh 后生效）
 #
-# 使用方法:
+# 本文件是可提交的“示例模板”，实际运行时脚本会加载 `scripts/config.sh`。
+# 为避免泄露 token：`scripts/config.sh` 已在 .gitignore 中忽略，请勿手动提交。
+#
+# 使用方法：
 #   cp scripts/config.example.sh scripts/config.sh
-#   # 编辑 scripts/config.sh，填入你的 GitLab 地址和 Token
+#   $EDITOR scripts/config.sh
 #
-# 注意: scripts/config.sh 已加入 .gitignore，不会被提交到仓库。
+# 约定：
+# - OLD_* 用于读取旧实例（API + git clone）
+# - NEW_* 用于写入新实例（API 创建资源 + git push）
+#
+# 权限建议（PAT scopes）：
+# - OLD_TOKEN：至少 `read_repository` + `api`（或 `read_api`），用于拉项目列表/成员并进行 clone
+# - NEW_TOKEN：至少 `api` + `write_repository`，用于创建 group/project/user 并 push
+#
+# 注意事项：
+# - 若旧实例为 v3 且出现“管理员 token 仍拉不到全量项目”，可考虑在步骤 1 使用 /projects/all
+# - 若新实例启用了强制邮箱验证/外部身份源，创建用户可能需要额外配置（见 README/文档）
 #
 
 # ---------------------------------------------------------------------------

@@ -1,12 +1,28 @@
 #!/usr/bin/env bash
 #
-# 步骤 2: 在新 GitLab 创建 Group
+# 步骤 2：在新 GitLab 创建 Group（仅处理 group namespace）
 #
-# 仅为 namespace_kind=group 的命名空间创建 Group；个人项目（user）跳过。
+# 目标：
+# - 读取步骤 1 生成的 `repos.txt`，对其中 `namespace_kind=group` 的 namespace 在新实例创建同名 Group
+# - `namespace_kind=user`（个人项目）对应的是“用户 namespace”，**不应创建 Group**，否则会与 username 冲突
 #
-# 依赖: curl, jq
-# 输入: gitlab-migration/repos.txt
-# 输出: gitlab-migration/groups_created.txt
+# 输入文件（位于 WORKDIR，默认 `./gitlab-migration`）：
+# - repos.txt
+#
+# 输出文件（位于 WORKDIR）：
+# - groups_created.txt：记录本次新创建的 Group path（便于审计/排错）
+#
+# 依赖：
+# - curl、jq
+#
+# 行为与重跑语义：
+# - 脚本会对每个 group namespace 去重处理（同一个 namespace 只处理一次）
+# - 若 Group 已存在则输出 [SKIP] 并跳过；可安全重复执行（幂等）
+#
+# 风险与注意：
+# - 该步骤会通过 API 在目标实例创建资源（写入操作）
+# - 如果你误把个人 namespace 当成 Group 创建，会导致后续“创建同名用户失败”
+#   （因为 GitLab 的 username 与顶级 group path 共享命名空间）
 #
 
 set -euo pipefail

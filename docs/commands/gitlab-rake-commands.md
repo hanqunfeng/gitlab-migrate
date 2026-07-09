@@ -194,7 +194,19 @@ sudo gitlab-ctl tail nginx
 | 检查仓库完整性      | `sudo gitlab-rake gitlab:git:fsck`                     |
 | 查看所有 Rake 任务 | `sudo gitlab-rake -T`                                  |
 
+### 批量把用户加入其可访问的项目（迁移辅助）
 
+在迁移/导出脚本需要“用某个用户的 token 拉取项目列表”但又发现 **API 返回的项目不全** 时（即便该用户在 Web UI 中是管理员，旧版 GitLab 的某些 API 行为也可能仅返回“用户已被授予的项目”），可用以下任务将指定邮箱对应的用户批量加入其相关项目，以提升可见性，但如果是管理员就没必要这么做，通过API接口`/api/v4/projects/all` 一样可以获取全部项目信息。
+
+```bash
+sudo gitlab-rake gitlab:import:user_to_projects[youremail@domain.com]
+```
+
+注意事项：
+
+- 该命令会**修改生产数据（成员关系）**，建议在低峰期执行，并在执行前做好备份/快照。
+- 项目数量较多时可能触发大量数据库写入与后台任务（Sidekiq），若执行后未生效请检查 Sidekiq 是否正常。
+- 若你能使用 **管理员级别的 API Token** 完成迁移，通常更推荐“用管理员 token 读取全量项目 + 迁移到新实例后再同步成员”，而不是在旧实例上做大规模授权变更。
 
 ## 常见问题
 

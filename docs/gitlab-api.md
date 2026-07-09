@@ -156,6 +156,12 @@ curl -s --header "PRIVATE-TOKEN: $TOKEN" \
 | 分页 | `per_page` + `page` | `per_page` + `page` |
 | 简化字段 | `simple=true` | `simple=true` |
 
+> **v3 兼容提示（迁移场景常见）**：部分旧版 GitLab 在 `GET /api/v3/projects` 下可能只返回“对当前 token 用户可见/有关联”的项目集合，即便该用户在 Web UI 中是管理员，也可能出现“拿不到未授权项目”的情况。  
+> 这时可改用 `GET /api/v3/projects/all` 拉取更完整的实例项目列表（脚本迁移步骤 1 即属于此类场景）。  
+>
+> - **不带 `all`**：更偏向“当前用户可见/相关”的项目集合（不同旧版本行为可能不完全一致）。
+> - **带 `all`（`/projects/all`）**：更偏向“实例范围的项目集合”（更适合迁移时生成全量 `repos.txt`）。
+
 **namespace 类型识别差异（重要）**：
 
 | 字段 | v3 | v4 |
@@ -181,9 +187,13 @@ end
 curl -s --header "PRIVATE-TOKEN: $TOKEN" \
   "$GITLAB/api/v4/projects?per_page=100&page=1&simple=true" | jq .
 
-# v3：拉取项目列表
+# v3：拉取项目列表（部分旧版本可能会缺少未授权项目）
 curl -s --header "PRIVATE-TOKEN: $TOKEN" \
   "$GITLAB/api/v3/projects?per_page=100&page=1&simple=true" | jq .
+
+# v3：拉取“全量”项目列表（迁移场景更推荐，用于避免遗漏项目）
+curl -s --header "PRIVATE-TOKEN: $TOKEN" \
+  "$GITLAB/api/v3/projects/all?per_page=100&page=1&simple=true" | jq .
 
 # v4：只看 namespace.kind / owner_id（便于区分 group/user 项目）
 curl -s --header "PRIVATE-TOKEN: $TOKEN" \
@@ -624,7 +634,7 @@ curl -s --request POST \
 
 | 迁移步骤 | 主要 API | 版本要求 |
 |----------|----------|----------|
-| 步骤 1 拉取项目 | `GET /projects` | 源：v3 或 v4 |
+| 步骤 1 拉取项目 | `GET /projects`（v3 可能需 `GET /projects/all`） | 源：v3 或 v4 |
 | 步骤 2 创建 Group | `GET/POST /groups` | 目标：v4 |
 | 步骤 3 创建 Project | `GET/POST /projects`，`GET /namespaces` | 目标：v4 |
 | 用户步骤 1 收集用户 | `GET /groups/*/members`，`GET /projects/*/members`，v4 额外 `members/all` | 源：v3 或 v4 |
